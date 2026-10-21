@@ -70,6 +70,39 @@ function showDetail(id) {
   modal.showModal();
 }
 
+async function surprise() {
+  const btn = document.getElementById('surprise');
+  btn.disabled = true;
+  try {
+    // Algunas páginas pueden no tener personajes con frases: reintenta hasta 5 veces.
+    for (let i = 0; i < 5; i++) {
+      const n = Math.floor(Math.random() * totalPages) + 1;
+      const res = await fetch(`${API}?page=${n}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const { results } = await res.json();
+      const withPhrases = results.filter((c) => c.phrases && c.phrases.length);
+      if (!withPhrases.length) continue;
+      const c = withPhrases[Math.floor(Math.random() * withPhrases.length)];
+      const phrase = c.phrases[Math.floor(Math.random() * c.phrases.length)];
+      modalBody.innerHTML = `
+        <img src="${CDN}${esc(c.portrait_path)}" alt="${esc(c.name)}">
+        <h2>${esc(c.name)}</h2>
+        <p>${esc(c.occupation || '')}</p>
+        <blockquote>&ldquo;${esc(phrase)}&rdquo;</blockquote>
+        <button id="again">Otro más</button>`;
+      document.getElementById('again').addEventListener('click', surprise);
+      if (!modal.open) modal.showModal();
+      return;
+    }
+    statusEl.textContent = 'No se encontró ningún personaje con frases, probá de nuevo.';
+  } catch (err) {
+    statusEl.textContent = `No se pudo cargar: ${err.message}`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+document.getElementById('surprise').addEventListener('click', surprise);
 prev.addEventListener('click', () => loadPage(page - 1));
 next.addEventListener('click', () => loadPage(page + 1));
 search.addEventListener('input', render);
